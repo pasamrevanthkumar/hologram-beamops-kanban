@@ -132,8 +132,14 @@ Exit criteria:
 - Distributed behavior and failure scenarios are documented
 - Scaling decisions are supported by experiments and operational needs
 
-GitHub milestone: Pending
-GitHub issues: Pending
+GitHub milestone: M0 - Planning and toolchain
+
+GitHub issues:
+- #1 — [Document official technical references and tool versions](https://github.com/pasamrevanthkumar/hologram-beamops-kanban/issues/1)
+- #2 — [Document the local development and verification workflow](https://github.com/pasamrevanthkumar/hologram-beamops-kanban/issues/2)
+- #3 — [Verify Elixir, Phoenix, and Hologram compatibility](https://github.com/pasamrevanthkumar/hologram-beamops-kanban/issues/3)
+- #4 — [Review and resolve initial architecture decisions](https://github.com/pasamrevanthkumar/hologram-beamops-kanban/issues/4)
+- #5 — [Finalize the initial application architecture](https://github.com/pasamrevanthkumar/hologram-beamops-kanban/issues/5)
 
 ## Milestone M6 — Observability
 
