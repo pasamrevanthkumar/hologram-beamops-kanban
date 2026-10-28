@@ -58,11 +58,26 @@ Hologram formatting rules, and `.gitignore` excludes
 This project is a reference only. Its dependencies and configuration
 have not been copied into this repository.
 
-### Candidate Hologram version
+### Candidate dependency baseline
 
-Hologram 0.12.3 is the current candidate as of 2026-10-28.
-Confirm its requirements and integration instructions against the
-official documentation before pinning the dependency.
+The following versions are candidates for the initial application,
+not yet a verified dependency lockfile.
+
+| Component | Candidate | Evidence/status |
+|---|---|---|
+| Erlang/OTP | 29 | Installed locally; meets documented minimum |
+| Elixir | 1.20.4 | Installed locally; meets documented minimum |
+| Node.js | 24.21.0 | Installed locally; meets documented minimum |
+| Phoenix | 1.8.15 | Used by the existing Hologram reference project |
+| Hologram | 0.12.3 | Current candidate release |
+| Ecto / Ecto SQL | 3.14.x | Candidate persistence dependencies |
+| Postgrex | 0.22.4 | Used by the reference project |
+
+The initial Hologram dependency requirement will be evaluated as
+`{:hologram, "~> 0.12.3"}`. Mix will resolve the exact version and
+record it in `mix.lock` when the application is created and dependencies
+are fetched. The Phoenix and database dependency requirements must also
+be selected in the generated application's `mix.exs`.
 
 Official references:
 
@@ -70,13 +85,16 @@ Official references:
 - https://hologram.page/docs/introduction
 - https://hologram.hexdocs.pm/
 - https://hex.pm/packages/hologram
+- https://hex.pm/packages/phoenix
+- https://hex.pm/packages/ecto_sql
+- https://hex.pm/packages/postgrex
 
 ### Outstanding verification
 
-- [ ] Choose and pin the initial dependency versions.
-- [ ] Verify dependency resolution in this repository.
-- [ ] Compile the application with the Hologram compiler enabled.
+- [ ] Generate the Phoenix host application.
+- [ ] Resolve the candidate dependency requirements.
+- [ ] Compile with the Hologram compiler enabled.
 - [ ] Verify endpoint and static-asset integration.
 - [ ] Start the application locally and verify a Hologram page.
 - [ ] Run automated tests.
-- [ ] Record the actual results before accepting the architecture.
+- [ ] Record actual results before accepting the architecture.
