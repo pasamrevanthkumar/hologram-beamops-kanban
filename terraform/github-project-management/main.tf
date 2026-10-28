@@ -62,3 +62,208 @@ resource "github_repository_milestone" "project" {
   title       = each.value.title
   description = each.value.description
 }
+
+locals {
+  issue_labels = {
+    planning = {
+      name        = "Kind:Planning"
+      color       = "0E8A16"
+      description = "Requirements, architecture, decisions, and technical research."
+    }
+    application = {
+      name        = "Kind:Application"
+      color       = "1D76DB"
+      description = "Application features, domain logic, and user-facing behavior."
+    }
+    testing = {
+      name        = "Kind:Testing"
+      color       = "FBCA04"
+      description = "Automated tests, validation, and verification."
+    }
+    cicd = {
+      name        = "Kind:CI/CD"
+      color       = "5319E7"
+      description = "Continuous integration, delivery automation, and releases."
+    }
+    infrastructure = {
+      name        = "Kind:Infrastructure"
+      color       = "D93F0B"
+      description = "Runtime environments, containers, Terraform, and infrastructure."
+    }
+    security = {
+      name        = "Kind:Security"
+      color       = "B60205"
+      description = "Access control, secret management, and security hardening."
+    }
+    observability = {
+      name        = "Kind:Observability"
+      color       = "006B75"
+      description = "Logs, metrics, dashboards, alerts, and operational visibility."
+    }
+    documentation = {
+      name        = "Kind:Documentation"
+      color       = "0075CA"
+      description = "Project documentation, operational guides, and lessons learned."
+    }
+  }
+}
+
+resource "github_issue_label" "project" {
+  for_each = local.issue_labels
+
+  repository  = github_repository.project.name
+  name        = each.value.name
+  color       = each.value.color
+  description = each.value.description
+}
+
+
+locals {
+  project_issues = {
+    hologram_compatibility = {
+      title     = "Verify Elixir, Phoenix, and Hologram compatibility"
+      milestone = "M0"
+      labels    = ["Kind:Planning"]
+
+      body = <<-EOT
+      ## Objective
+
+      Verify the supported versions and integration points required for the Hologram-based Kanban application.
+
+      ## Tasks
+
+      - Identify the Hologram version to use.
+      - Verify compatibility with the selected Elixir, Erlang/OTP, and Phoenix versions.
+      - Verify the supported Phoenix host integration.
+      - Identify the supported Hologram interaction and testing APIs.
+      - Record authoritative documentation and compatibility evidence.
+
+      ## Acceptance criteria
+
+      - [ ] Compatible versions and constraints are documented.
+      - [ ] Official documentation references are recorded.
+      - [ ] Unsupported or uncertain integrations are clearly identified.
+      - [ ] Findings are committed to the project documentation.
+      EOT
+    }
+
+    documentation_inventory = {
+      title     = "Document official technical references and tool versions"
+      milestone = "M0"
+      labels    = ["Kind:Documentation"]
+
+      body = <<-EOT
+      ## Objective
+
+      Establish a reliable reference inventory for the complete application lifecycle.
+
+      ## Tasks
+
+      - Record official Elixir, Erlang/OTP, Phoenix, and Hologram documentation.
+      - Record Ecto, PostgreSQL, ExUnit, Docker, and Terraform references.
+      - Identify the documentation needed for later CI/CD, deployment, and observability stages.
+      - Record the version or compatibility constraints relevant to this project.
+
+      ## Acceptance criteria
+
+      - [ ] References are recorded in the repository.
+      - [ ] Tool versions and unresolved version choices are distinguished.
+      - [ ] Documentation needed for later milestones is discoverable.
+      - [ ] No compatibility claim is made without supporting evidence.
+      EOT
+    }
+
+    architecture_review = {
+      title     = "Finalize the initial application architecture"
+      milestone = "M0"
+      labels    = ["Kind:Planning"]
+
+      body = <<-EOT
+      ## Objective
+
+      Review the proposed architecture before implementing application code.
+
+      ## Tasks
+
+      - Verify the Hologram UI and Phoenix host boundaries.
+      - Define the responsibilities of the application/domain layer.
+      - Evaluate Ecto and PostgreSQL compatibility.
+      - Identify persistence, transaction, and ordering requirements.
+      - Define appropriate testing boundaries.
+
+      ## Acceptance criteria
+
+      - [ ] Architecture decisions are supported by documentation or experiments.
+      - [ ] Confirmed components and proposed components are distinguished.
+      - [ ] Open technical questions are recorded.
+      - [ ] docs/ARCHITECTURE.md reflects the reviewed architecture.
+      EOT
+    }
+
+    architecture_decisions = {
+      title     = "Review and resolve initial architecture decisions"
+      milestone = "M0"
+      labels    = ["Kind:Planning"]
+
+      body = <<-EOT
+      ## Objective
+
+      Review the proposed architecture decision records and document decisions that must be settled before implementation.
+
+      ## Tasks
+
+      - Review ADR-002: separation of domain rules from UI and persistence.
+      - Review ADR-003: PostgreSQL and Ecto.
+      - Review ADR-006: access control before public exposure.
+      - Review ADR-007: production infrastructure and observability.
+      - Record the context, options, rationale, consequences, and verification evidence for each decision.
+
+      ## Acceptance criteria
+
+      - [ ] Decisions required for the initial local implementation are resolved.
+      - [ ] Unresolved future deployment decisions remain explicitly proposed.
+      - [ ] No cloud infrastructure is provisioned as part of this issue.
+      - [ ] docs/DECISIONS.md reflects the current decision statuses.
+      EOT
+    }
+
+    local_workflow = {
+      title     = "Document the local development and verification workflow"
+      milestone = "M0"
+      labels    = ["Kind:Documentation"]
+
+      body = <<-EOT
+      ## Objective
+
+      Define how the application will be developed and verified locally before moving into delivery and deployment stages.
+
+      ## Tasks
+
+      - Document the intended local development prerequisites.
+      - Identify the commands needed for formatting, compilation, and testing.
+      - Document how compatibility experiments and their results will be recorded.
+      - Define how GitHub issues and milestone progress will be reflected in local documentation.
+
+      ## Acceptance criteria
+
+      - [ ] The workflow is documented in the repository.
+      - [ ] Required commands are verified where the application/tooling is available.
+      - [ ] Unverified commands are clearly marked rather than presented as tested.
+      - [ ] Local documentation remains the version-controlled project record.
+      EOT
+    }
+  }
+}
+
+resource "github_issue" "project" {
+  for_each = local.project_issues
+
+  repository = github_repository.project.name
+  title      = each.value.title
+  body       = each.value.body
+  labels     = each.value.labels
+
+  milestone_number = github_repository_milestone.project[
+    each.value.milestone
+  ].number
+}
