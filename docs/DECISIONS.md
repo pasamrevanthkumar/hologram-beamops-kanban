@@ -30,33 +30,61 @@ Consequences:
 
 ## ADR-002: Separate domain rules from UI and persistence
 
-Status: Proposed
+Status: Accepted
 
 Context:
 The application must be testable and maintainable as it grows through
 the delivery lifecycle.
 
-Proposal:
+Decision:
 Keep task and board rules in application/domain modules rather than
 embedding all business behavior in UI components or database callbacks.
 
+Rationale:
+Separating domain rules from the Hologram UI and persistence layer makes
+the rules easier to test independently and reduces coupling as the
+application gains features and operational complexity.
+
+Consequences:
+- Domain behavior should be testable without rendering UI components.
+- Persistence concerns should not define the application business rules.
+- The initial module boundaries must remain simple and be reviewed as
+  implementation reveals concrete needs.
+
 Verification:
-Confirm the module boundaries during the initial implementation design.
+The architectural direction is accepted. Confirm the module boundaries
+during implementation and add focused domain tests before treating this
+decision as fully validated in practice.
 
 ## ADR-003: PostgreSQL and Ecto for persistence
 
-Status: Proposed
+Status: Accepted
 
 Context:
 The application needs durable data, migrations, constraints, and
 database-backed tests.
 
-Proposal:
-Evaluate PostgreSQL and Ecto for the initial persistence layer.
+Decision:
+Use PostgreSQL as the relational database and Ecto with Ecto SQL for
+data mapping, migrations, queries, and transaction management.
+
+Rationale:
+PostgreSQL provides durable relational storage and database constraints.
+Ecto provides an Elixir-native persistence layer with explicit schemas,
+queries, changesets, migrations, and transaction support.
+
+Consequences:
+- Local development and tests require a configured PostgreSQL database.
+- Data integrity should be enforced through appropriate database
+  constraints as well as application-level validation.
+- Multi-step task moves and ordering changes must use transactions where
+  needed to preserve consistency.
 
 Verification:
-Check compatibility with the selected Hologram and Phoenix dependency
-versions, test database setup, and document local development commands.
+The selected dependencies compile with the current Hologram and Phoenix
+baseline, and local database creation and migration commands have been
+checked. Kanban schemas, constraints, migrations, transaction behavior,
+and database-backed tests remain to be implemented and verified.
 
 ## ADR-004: Local-first development
 

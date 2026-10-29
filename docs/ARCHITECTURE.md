@@ -2,11 +2,9 @@
 
 ## 1. Status
 
-Status: Proposed; implementation and compatibility checks are pending.
+Status: Initial scaffold integration verified; Kanban implementation and production architecture remain in progress.
 
-This document describes the initial logical architecture. It is not
-evidence that dependencies, services, or deployment infrastructure have
-already been installed or configured.
+This document describes the logical architecture and current implementation boundary. The basic Hologram scaffold and local PostgreSQL setup have been verified. The Kanban domain, schemas, migrations, and database-backed behavior remain to be implemented and tested. Production deployment and infrastructure have not been implemented.
 
 ## 2. Architectural goals
 
@@ -56,8 +54,7 @@ This layer should avoid depending on UI rendering details.
 
 ### Persistence layer
 
-Proposed technology: Ecto with PostgreSQL, subject to compatibility
-verification.
+Selected technology: Ecto with PostgreSQL, as recorded in ADR-003. Kanban persistence behavior remains to be implemented and verified.
 
 Responsibilities:
 - Define schemas and changesets.
@@ -67,7 +64,7 @@ Responsibilities:
 
 ### Database
 
-Proposed technology: PostgreSQL.
+Selected technology: PostgreSQL, as recorded in ADR-003.
 
 Initially run it locally. Later, containerize or orchestrate it as
 required by the relevant delivery stage. Production database hosting

@@ -24,3 +24,27 @@ override.tf.json
 .idea/
 .vscode/
 .DS_Store
+
+# Hologram generated JavaScript bundles.
+/priv/static/hologram/
+
+# Phoenix / Mix compiled artifacts and dependencies.
+/_build/
+/cover/
+/deps/
+/doc/
+/.fetch
+erl_crash.dump
+*.ez
+/tmp/
+
+# Generated application assets and caches.
+/priv/static/assets/
+/priv/static/cache_manifest.json
+
+# Node.js / npm files.
+npm-debug.log
+/assets/node_modules/
+
+# Local direnv configuration; may load local secrets.
+.envrc
