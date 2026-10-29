@@ -54,6 +54,24 @@ defmodule HologramBeamOpsKanban.Tasks do
   end
 
   @doc """
+  Marks a task as complete by recording the current UTC time.
+
+  Returns `{:ok, task}` on success or `{:error, changeset}` on failure.
+  """
+  def complete_task(task) do
+    update_task(task, %{completed_at: DateTime.utc_now()})
+  end
+
+  @doc """
+  Reopens a completed task by clearing its completion timestamp.
+
+  Returns `{:ok, task}` on success or `{:error, changeset}` on failure.
+  """
+  def reopen_task(task) do
+    update_task(task, %{completed_at: nil})
+  end
+
+  @doc """
   Deletes a task.
   """
   def delete_task(task) do

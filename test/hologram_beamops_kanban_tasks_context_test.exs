@@ -15,6 +15,16 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
     column
   end
 
+  defp create_task(column) do
+    {:ok, task} =
+      Tasks.create_task(column.id, %{
+        title: "Build feature",
+        position: 0
+      })
+
+    task
+  end
+
   describe "list_tasks/1" do
     test "returns tasks ordered by position" do
       column = create_column()
@@ -102,9 +112,7 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
   describe "get_task!/1" do
     test "returns the task with the given ID" do
       column = create_column()
-
-      {:ok, task} =
-        Tasks.create_task(column.id, %{title: "Build feature", position: 0})
+      task = create_task(column)
 
       assert Tasks.get_task!(task.id) == task
     end
@@ -119,9 +127,7 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
   describe "update_task/2" do
     test "updates a task's title and description" do
       column = create_column()
-
-      {:ok, task} =
-        Tasks.create_task(column.id, %{title: "Build feature", position: 0})
+      task = create_task(column)
 
       assert {:ok, updated_task} =
                Tasks.update_task(task, %{
@@ -135,9 +141,7 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
 
     test "returns a changeset error for an invalid update" do
       column = create_column()
-
-      {:ok, task} =
-        Tasks.create_task(column.id, %{title: "Build feature", position: 0})
+      task = create_task(column)
 
       assert {:error, changeset} = Tasks.update_task(task, %{title: "   "})
 
@@ -145,12 +149,49 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
     end
   end
 
+  describe "complete_task/1" do
+    test "marks a task complete with a UTC timestamp" do
+      task = create_task(create_column())
+
+      assert {:ok, completed_task} = Tasks.complete_task(task)
+      assert %DateTime{} = completed_task.completed_at
+      assert completed_task.completed_at.time_zone == "Etc/UTC"
+    end
+
+    test "persists the completion timestamp" do
+      task = create_task(create_column())
+
+      assert {:ok, completed_task} = Tasks.complete_task(task)
+
+      persisted_task = Tasks.get_task!(task.id)
+
+      assert persisted_task.completed_at == completed_task.completed_at
+    end
+  end
+
+  describe "reopen_task/1" do
+    test "clears a task's completion timestamp" do
+      task = create_task(create_column())
+
+      {:ok, completed_task} = Tasks.complete_task(task)
+
+      assert {:ok, reopened_task} = Tasks.reopen_task(completed_task)
+      assert is_nil(reopened_task.completed_at)
+    end
+
+    test "persists the reopened state" do
+      task = create_task(create_column())
+
+      {:ok, completed_task} = Tasks.complete_task(task)
+      {:ok, _reopened_task} = Tasks.reopen_task(completed_task)
+
+      assert is_nil(Tasks.get_task!(task.id).completed_at)
+    end
+  end
+
   describe "delete_task/1" do
     test "deletes the task" do
-      column = create_column()
-
-      {:ok, task} =
-        Tasks.create_task(column.id, %{title: "Build feature", position: 0})
+      task = create_task(create_column())
 
       assert {:ok, deleted_task} = Tasks.delete_task(task)
       assert deleted_task.id == task.id
@@ -164,9 +205,7 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
   describe "get_task_column!/1" do
     test "returns the column containing the task" do
       column = create_column()
-
-      {:ok, task} =
-        Tasks.create_task(column.id, %{title: "Build feature", position: 0})
+      task = create_task(column)
 
       assert Tasks.get_task_column!(task.id) == column
     end
@@ -212,9 +251,7 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
   describe "database integrity" do
     test "the task remains persisted after retrieving it from the database" do
       column = create_column()
-
-      {:ok, task} =
-        Tasks.create_task(column.id, %{title: "Build feature", position: 0})
+      task = create_task(column)
 
       retrieved_task = Repo.get!(Task, task.id)
 
