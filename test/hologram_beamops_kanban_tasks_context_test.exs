@@ -189,6 +189,117 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
     end
   end
 
+  describe "move_task/2" do
+    test "moves a task toward the beginning and shifts other tasks" do
+      column = create_column()
+
+      {:ok, first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 1})
+
+      {:ok, third} =
+        Tasks.create_task(column.id, %{title: "Third", position: 2})
+
+      assert {:ok, moved_task} = Tasks.move_task(third, 0)
+
+      assert moved_task.position == 0
+
+      assert Enum.map(Tasks.list_tasks(column.id), &{&1.title, &1.position}) ==
+               [{"Third", 0}, {"First", 1}, {"Second", 2}]
+
+      assert Tasks.get_task!(first.id).position == 1
+      assert Tasks.get_task!(second.id).position == 2
+    end
+
+    test "moves a task toward the end and shifts other tasks" do
+      column = create_column()
+
+      {:ok, first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 1})
+
+      {:ok, third} =
+        Tasks.create_task(column.id, %{title: "Third", position: 2})
+
+      assert {:ok, moved_task} = Tasks.move_task(first, 2)
+
+      assert moved_task.position == 2
+
+      assert Enum.map(Tasks.list_tasks(column.id), &{&1.title, &1.position}) ==
+               [{"Second", 0}, {"Third", 1}, {"First", 2}]
+
+      assert Tasks.get_task!(second.id).position == 0
+      assert Tasks.get_task!(third.id).position == 1
+    end
+
+    test "returns an error for a negative position without changing the order" do
+      column = create_column()
+
+      {:ok, _first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 1})
+
+      assert {:error, :invalid_position} = Tasks.move_task(second, -1)
+
+      assert Enum.map(Tasks.list_tasks(column.id), &{&1.title, &1.position}) ==
+               [{"First", 0}, {"Second", 1}]
+    end
+
+    test "returns an error when the position is outside the column's task range" do
+      column = create_column()
+
+      {:ok, first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      assert {:error, :invalid_position} = Tasks.move_task(first, 1)
+
+      assert Tasks.list_tasks(column.id) == [first]
+    end
+
+    test "keeps the order unchanged when moving a task to its current position" do
+      column = create_column()
+
+      {:ok, _first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 1})
+
+      assert {:ok, unchanged_task} = Tasks.move_task(second, 1)
+      assert unchanged_task.position == 1
+
+      assert Enum.map(Tasks.list_tasks(column.id), &{&1.title, &1.position}) ==
+               [{"First", 0}, {"Second", 1}]
+    end
+
+    test "normalizes positions when moving tasks in a column with gaps" do
+      column = create_column()
+
+      {:ok, first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 2})
+
+      {:ok, third} =
+        Tasks.create_task(column.id, %{title: "Third", position: 4})
+
+      assert {:ok, _moved_task} = Tasks.move_task(third, 0)
+
+      assert Enum.map(Tasks.list_tasks(column.id), &{&1.title, &1.position}) ==
+               [{"Third", 0}, {"First", 1}, {"Second", 2}]
+
+      assert Tasks.get_task!(first.id).position == 1
+      assert Tasks.get_task!(second.id).position == 2
+    end
+  end
+
   describe "delete_task/1" do
     test "deletes the task" do
       task = create_task(create_column())
