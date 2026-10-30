@@ -273,9 +273,63 @@ defmodule HologramBeamOpsKanban.Tasks do
   end
 
   @doc """
-  Deletes a task.
+  Deletes a task and normalizes the remaining positions in its column.
+
+  The deletion and position normalization happen in one transaction.
   """
-  def delete_task(task), do: Repo.delete(task)
+  def delete_task(%Task{} = task) do
+    Repo.transaction(fn ->
+      column =
+        Repo.one(
+          from column in Column,
+            where: column.id == ^task.column_id,
+            lock: "FOR UPDATE"
+        )
+
+      if is_nil(column), do: Repo.rollback(:column_not_found)
+
+      current_task =
+        Repo.one(
+          from current in Task,
+            where: current.id == ^task.id,
+            lock: "FOR UPDATE"
+        )
+
+      cond do
+        is_nil(current_task) ->
+          Repo.rollback(:task_not_found)
+
+        current_task.column_id != task.column_id ->
+          Repo.rollback(:task_not_in_column)
+
+        true ->
+          tasks =
+            Repo.all(
+              from current in Task,
+                where: current.column_id == ^task.column_id,
+                order_by: [asc: current.position, asc: current.id],
+                lock: "FOR UPDATE"
+            )
+
+          case Repo.delete(current_task) do
+            {:ok, deleted_task} ->
+              remaining_tasks =
+                Enum.reject(tasks, &(&1.id == deleted_task.id))
+
+              normalize_task_positions!(remaining_tasks)
+
+              deleted_task
+
+            {:error, changeset} ->
+              Repo.rollback(changeset)
+          end
+      end
+    end)
+    |> case do
+      {:ok, deleted_task} -> {:ok, deleted_task}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 
   @doc """
   Returns the column associated with a task ID.

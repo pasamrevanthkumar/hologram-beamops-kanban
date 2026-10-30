@@ -456,6 +456,45 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
         Tasks.get_task!(task.id)
       end
     end
+
+    test "normalizes the remaining task positions after deletion" do
+      column = create_column()
+
+      {:ok, first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 1})
+
+      {:ok, third} =
+        Tasks.create_task(column.id, %{title: "Third", position: 2})
+
+      assert {:ok, deleted_task} = Tasks.delete_task(second)
+      assert deleted_task.id == second.id
+
+      remaining_tasks = Tasks.list_tasks(column.id)
+
+      assert Enum.map(remaining_tasks, & &1.title) == [
+               "First",
+               "Third"
+             ]
+
+      assert Enum.map(remaining_tasks, & &1.position) == [0, 1]
+
+      assert Enum.map(remaining_tasks, & &1.id) == [
+               first.id,
+               third.id
+             ]
+    end
+
+    test "deletes the only task in a column" do
+      column = create_column()
+      task = create_task(column)
+
+      assert {:ok, deleted_task} = Tasks.delete_task(task)
+      assert deleted_task.id == task.id
+      assert Tasks.list_tasks(column.id) == []
+    end
   end
 
   describe "get_task_column!/1" do
