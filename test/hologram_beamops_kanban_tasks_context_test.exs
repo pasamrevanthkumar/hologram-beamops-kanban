@@ -147,6 +147,52 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
 
       assert "can't be blank" in errors_on(changeset).title
     end
+
+    test "rejects direct position changes" do
+      task = create_task(create_column())
+
+      assert {:error, :unsupported_task_attributes} =
+               Tasks.update_task(task, %{position: 5})
+    end
+
+    test "rejects direct column changes" do
+      task = create_task(create_column())
+      another_column = create_column("In Progress", 1)
+
+      assert {:error, :unsupported_task_attributes} =
+               Tasks.update_task(task, %{column_id: another_column.id})
+    end
+
+    test "rejects direct completion status changes" do
+      task = create_task(create_column())
+
+      assert {:error, :unsupported_task_attributes} =
+               Tasks.update_task(task, %{completed_at: DateTime.utc_now()})
+    end
+
+    test "updates metadata using the latest database record" do
+      task = create_task(create_column())
+
+      stale_task = task
+
+      {:ok, _updated_task} =
+        Tasks.update_task(task, %{title: "Updated title"})
+
+      assert {:ok, updated_task} =
+               Tasks.update_task(stale_task, %{description: "Latest description"})
+
+      assert updated_task.title == "Updated title"
+      assert updated_task.description == "Latest description"
+    end
+
+    test "returns task_not_found when the task no longer exists" do
+      task = create_task(create_column())
+
+      {:ok, _deleted_task} = Tasks.delete_task(task)
+
+      assert {:error, :task_not_found} =
+               Tasks.update_task(task, %{title: "Updated title"})
+    end
   end
 
   describe "complete_task/1" do
@@ -167,6 +213,28 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
 
       assert persisted_task.completed_at == completed_task.completed_at
     end
+
+    test "uses the latest database record when completing a stale task" do
+      task = create_task(create_column())
+
+      stale_task = task
+
+      {:ok, _updated_task} =
+        Tasks.update_task(task, %{title: "Updated title"})
+
+      assert {:ok, completed_task} = Tasks.complete_task(stale_task)
+
+      assert completed_task.title == "Updated title"
+      assert %DateTime{} = completed_task.completed_at
+    end
+
+    test "returns task_not_found when completing a deleted task" do
+      task = create_task(create_column())
+
+      {:ok, _deleted_task} = Tasks.delete_task(task)
+
+      assert {:error, :task_not_found} = Tasks.complete_task(task)
+    end
   end
 
   describe "reopen_task/1" do
@@ -186,6 +254,15 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
       {:ok, _reopened_task} = Tasks.reopen_task(completed_task)
 
       assert is_nil(Tasks.get_task!(task.id).completed_at)
+    end
+
+    test "returns task_not_found when reopening a deleted task" do
+      task = create_task(create_column())
+
+      {:ok, _completed_task} = Tasks.complete_task(task)
+      {:ok, _deleted_task} = Tasks.delete_task(task)
+
+      assert {:error, :task_not_found} = Tasks.reopen_task(task)
     end
   end
 
@@ -297,6 +374,14 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
 
       assert Tasks.get_task!(first.id).position == 1
       assert Tasks.get_task!(second.id).position == 2
+    end
+
+    test "returns an error when moving a deleted task" do
+      task = create_task(create_column())
+
+      {:ok, _deleted_task} = Tasks.delete_task(task)
+
+      assert {:error, :task_not_found} = Tasks.move_task(task, 0)
     end
   end
 
@@ -443,6 +528,43 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
       assert Enum.map(Tasks.list_tasks(column.id), & &1.title) ==
                ["Second", "First"]
     end
+
+    test "returns an error when moving a deleted task" do
+      source_column = create_column("To Do")
+      destination_column = create_column("In Progress")
+      task = create_task(source_column)
+
+      {:ok, _deleted_task} = Tasks.delete_task(task)
+
+      assert {:error, :task_not_found} =
+               Tasks.move_task_to_column(task, destination_column.id, 0)
+
+      assert Tasks.list_tasks(source_column.id) == []
+      assert Tasks.list_tasks(destination_column.id) == []
+    end
+
+    test "returns an error when the task no longer belongs to the supplied source column" do
+      source_column = create_column("To Do")
+      intermediate_column = create_column("In Progress")
+      destination_column = create_column("Done")
+
+      task = create_task(source_column)
+
+      {:ok, _moved_task} =
+        Tasks.move_task_to_column(task, intermediate_column.id, 0)
+
+      assert {:error, :task_not_in_source_column} =
+               Tasks.move_task_to_column(task, destination_column.id, 0)
+
+      assert Tasks.list_tasks(source_column.id) == []
+
+      assert [%{id: task_id, column_id: intermediate_column_id}] =
+               Tasks.list_tasks(intermediate_column.id)
+
+      assert task_id == task.id
+      assert intermediate_column_id == intermediate_column.id
+      assert Tasks.list_tasks(destination_column.id) == []
+    end
   end
 
   describe "delete_task/1" do
@@ -487,6 +609,31 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
              ]
     end
 
+    test "normalizes pre-existing position gaps after deletion" do
+      column = create_column()
+
+      {:ok, first} =
+        Tasks.create_task(column.id, %{title: "First", position: 0})
+
+      {:ok, second} =
+        Tasks.create_task(column.id, %{title: "Second", position: 3})
+
+      {:ok, third} =
+        Tasks.create_task(column.id, %{title: "Third", position: 6})
+
+      assert {:ok, deleted_task} = Tasks.delete_task(second)
+      assert deleted_task.id == second.id
+
+      assert Enum.map(Tasks.list_tasks(column.id), &{&1.title, &1.position}) ==
+               [
+                 {"First", 0},
+                 {"Third", 1}
+               ]
+
+      assert Tasks.get_task!(first.id).position == 0
+      assert Tasks.get_task!(third.id).position == 1
+    end
+
     test "deletes the only task in a column" do
       column = create_column()
       task = create_task(column)
@@ -494,6 +641,31 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
       assert {:ok, deleted_task} = Tasks.delete_task(task)
       assert deleted_task.id == task.id
       assert Tasks.list_tasks(column.id) == []
+    end
+
+    test "returns an error when deleting an already-deleted task" do
+      task = create_task(create_column())
+
+      {:ok, _deleted_task} = Tasks.delete_task(task)
+
+      assert {:error, :task_not_found} = Tasks.delete_task(task)
+    end
+
+    test "returns an error when the task no longer belongs to the supplied column" do
+      source_column = create_column("To Do")
+      destination_column = create_column("In Progress")
+
+      task = create_task(source_column)
+
+      {:ok, _moved_task} =
+        Tasks.move_task_to_column(task, destination_column.id, 0)
+
+      assert {:error, :task_not_in_column} = Tasks.delete_task(task)
+
+      assert Tasks.list_tasks(source_column.id) == []
+      assert [destination_task] = Tasks.list_tasks(destination_column.id)
+      assert destination_task.id == task.id
+      assert destination_task.position == 0
     end
   end
 

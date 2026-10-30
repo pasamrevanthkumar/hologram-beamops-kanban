@@ -22,13 +22,40 @@ defmodule HologramBeamOpsKanban.Tasks do
 
   @doc """
   Creates a task within the specified column.
+
+  Locks the parent column before insertion so task creation is serialized
+  with other operations that modify the column's task ordering.
   """
   def create_task(column_id, attrs \\ %{}) do
     attrs = Map.put(attrs, :column_id, column_id)
 
-    %Task{}
-    |> Task.changeset(attrs)
-    |> Repo.insert()
+    Repo.transaction(fn ->
+      Repo.one(
+        from column in Column,
+          where: column.id == ^column_id,
+          lock: "FOR UPDATE"
+      )
+
+      case %Task{}
+           |> Task.changeset(attrs)
+           |> Repo.insert() do
+        {:ok, task} ->
+          {:ok, task}
+
+        {:error, changeset} ->
+          Repo.rollback({:changeset_error, changeset})
+      end
+    end)
+    |> case do
+      {:ok, {:ok, task}} ->
+        {:ok, task}
+
+      {:error, {:changeset_error, changeset}} ->
+        {:error, changeset}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -39,12 +66,91 @@ defmodule HologramBeamOpsKanban.Tasks do
   def get_task!(id), do: Repo.get!(Task, id)
 
   @doc """
-  Updates a task.
+  Updates a task's editable metadata.
+
+  Position, column membership, and completion status must be changed
+  through their dedicated operations.
+
+  Reloads and locks the task inside a transaction so updates operate
+  on the current database record rather than a potentially stale struct.
   """
-  def update_task(task, attrs) do
+  def update_task(%Task{id: task_id}, attrs) when is_map(attrs) do
+    allowed_attrs = [:title, :description, "title", "description"]
+
+    if Enum.all?(Map.keys(attrs), &(&1 in allowed_attrs)) do
+      Repo.transaction(fn ->
+        current_task =
+          Repo.one(
+            from task in Task,
+              where: task.id == ^task_id,
+              lock: "FOR UPDATE"
+          )
+
+        if is_nil(current_task) do
+          Repo.rollback(:task_not_found)
+        end
+
+        case Task.changeset(current_task, attrs)
+             |> Repo.update() do
+          {:ok, updated_task} ->
+            updated_task
+
+          {:error, changeset} ->
+            Repo.rollback({:changeset_error, changeset})
+        end
+      end)
+      |> case do
+        {:ok, updated_task} ->
+          {:ok, updated_task}
+
+        {:error, {:changeset_error, changeset}} ->
+          {:error, changeset}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
+    else
+      {:error, :unsupported_task_attributes}
+    end
+  end
+
+  defp update_task_record(task, attrs) do
     task
     |> Task.changeset(attrs)
     |> Repo.update()
+  end
+
+  defp update_task_completion(task_id, completed_at) do
+    Repo.transaction(fn ->
+      current_task =
+        Repo.one(
+          from task in Task,
+            where: task.id == ^task_id,
+            lock: "FOR UPDATE"
+        )
+
+      if is_nil(current_task) do
+        Repo.rollback(:task_not_found)
+      end
+
+      case update_task_record(current_task, %{completed_at: completed_at}) do
+        {:ok, updated_task} ->
+          updated_task
+
+        {:error, changeset} ->
+          Repo.rollback({:changeset_error, changeset})
+      end
+    end)
+    |> case do
+      {:ok, updated_task} ->
+        {:ok, updated_task}
+
+      {:error, {:changeset_error, changeset}} ->
+        {:error, changeset}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
@@ -185,7 +291,7 @@ defmodule HologramBeamOpsKanban.Tasks do
               |> Kernel.+(length(source_tasks) + length(destination_tasks) + 1)
 
             updated_task =
-              case update_task(current_task, %{
+              case update_task_record(current_task, %{
                      column_id: destination_column_id,
                      position: temporary_position
                    }) do
@@ -233,7 +339,7 @@ defmodule HologramBeamOpsKanban.Tasks do
     temporary_offset = max_position + length(tasks) + 1
 
     Enum.each(tasks, fn current_task ->
-      case update_task(current_task, %{
+      case update_task_record(current_task, %{
              position: temporary_offset + current_task.id
            }) do
         {:ok, _updated_task} -> :ok
@@ -261,15 +367,15 @@ defmodule HologramBeamOpsKanban.Tasks do
   @doc """
   Marks a task as complete using the current UTC time.
   """
-  def complete_task(task) do
-    update_task(task, %{completed_at: DateTime.utc_now()})
+  def complete_task(%Task{id: task_id}) do
+    update_task_completion(task_id, DateTime.utc_now())
   end
 
   @doc """
   Reopens a completed task.
   """
-  def reopen_task(task) do
-    update_task(task, %{completed_at: nil})
+  def reopen_task(%Task{id: task_id}) do
+    update_task_completion(task_id, nil)
   end
 
   @doc """
