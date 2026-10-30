@@ -106,6 +106,122 @@ defmodule HologramBeamOpsKanban.Tasks do
 
   def move_task(%Task{}, _new_position), do: {:error, :invalid_position}
 
+  @doc """
+  Moves a task to another column at a zero-based position.
+
+  Reorders both columns in a transaction and normalizes their positions.
+  """
+  def move_task_to_column(
+        %Task{} = task,
+        destination_column_id,
+        new_position
+      )
+      when is_integer(destination_column_id) and is_integer(new_position) do
+    if task.column_id == destination_column_id do
+      move_task(task, new_position)
+    else
+      Repo.transaction(fn ->
+        column_ids =
+          [task.column_id, destination_column_id]
+          |> Enum.sort()
+
+        locked_columns =
+          Repo.all(
+            from column in Column,
+              where: column.id in ^column_ids,
+              order_by: [asc: column.id],
+              lock: "FOR UPDATE"
+          )
+
+        if length(locked_columns) != 2 do
+          Repo.rollback(:column_not_found)
+        end
+
+        current_task =
+          Repo.one(
+            from current in Task,
+              where: current.id == ^task.id,
+              lock: "FOR UPDATE"
+          )
+
+        cond do
+          is_nil(current_task) ->
+            Repo.rollback(:task_not_found)
+
+          current_task.column_id != task.column_id ->
+            Repo.rollback(:task_not_in_source_column)
+
+          true ->
+            source_tasks =
+              Repo.all(
+                from current in Task,
+                  where: current.column_id == ^task.column_id,
+                  order_by: [asc: current.position, asc: current.id],
+                  lock: "FOR UPDATE"
+              )
+
+            destination_tasks =
+              Repo.all(
+                from current in Task,
+                  where: current.column_id == ^destination_column_id,
+                  order_by: [asc: current.position, asc: current.id],
+                  lock: "FOR UPDATE"
+              )
+
+            if new_position < 0 or new_position > length(destination_tasks) do
+              Repo.rollback(:invalid_position)
+            end
+
+            source_tasks =
+              Enum.reject(source_tasks, &(&1.id == current_task.id))
+
+            destination_tasks =
+              List.insert_at(destination_tasks, new_position, current_task)
+
+            temporary_position =
+              (source_tasks ++ destination_tasks)
+              |> Enum.map(& &1.position)
+              |> Enum.max(fn -> -1 end)
+              |> Kernel.+(length(source_tasks) + length(destination_tasks) + 1)
+
+            updated_task =
+              case update_task(current_task, %{
+                     column_id: destination_column_id,
+                     position: temporary_position
+                   }) do
+                {:ok, updated_task} ->
+                  updated_task
+
+                {:error, changeset} ->
+                  Repo.rollback(changeset)
+              end
+
+            destination_tasks =
+              Enum.map(destination_tasks, fn destination_task ->
+                if destination_task.id == updated_task.id do
+                  updated_task
+                else
+                  destination_task
+                end
+              end)
+
+            normalize_task_positions!(source_tasks)
+            normalize_task_positions!(destination_tasks)
+
+            Repo.get!(Task, current_task.id)
+        end
+      end)
+      |> case do
+        {:ok, moved_task} -> {:ok, moved_task}
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+
+  def move_task_to_column(%Task{}, _destination_column_id, _new_position) do
+    {:error, :invalid_position}
+  end
+
   defp normalize_task_positions!(tasks) do
     # First move every task above the current position range. This prevents
     # collisions with the unique (column_id, position) database constraint.

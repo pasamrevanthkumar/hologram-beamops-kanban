@@ -300,6 +300,151 @@ defmodule HologramBeamOpsKanban.TasksContextTest do
     end
   end
 
+  describe "move_task_to_column/3" do
+    test "moves a task to a destination column and normalizes both columns" do
+      source_column = create_column("To Do")
+      destination_column = create_column("In Progress")
+
+      {:ok, first} =
+        Tasks.create_task(source_column.id, %{title: "First", position: 0})
+
+      {:ok, moved} =
+        Tasks.create_task(source_column.id, %{title: "Moved", position: 1})
+
+      {:ok, third} =
+        Tasks.create_task(source_column.id, %{title: "Third", position: 2})
+
+      {:ok, destination_first} =
+        Tasks.create_task(destination_column.id, %{title: "Destination first", position: 0})
+
+      {:ok, destination_second} =
+        Tasks.create_task(destination_column.id, %{title: "Destination second", position: 1})
+
+      assert {:ok, updated_task} =
+               Tasks.move_task_to_column(moved, destination_column.id, 1)
+
+      assert updated_task.column_id == destination_column.id
+      assert updated_task.position == 1
+
+      assert Enum.map(Tasks.list_tasks(source_column.id), &{&1.title, &1.position}) ==
+               [{"First", 0}, {"Third", 1}]
+
+      assert Enum.map(Tasks.list_tasks(destination_column.id), &{&1.title, &1.position}) ==
+               [
+                 {"Destination first", 0},
+                 {"Moved", 1},
+                 {"Destination second", 2}
+               ]
+
+      assert Tasks.get_task!(first.id).position == 0
+      assert Tasks.get_task!(third.id).position == 1
+      assert Tasks.get_task!(destination_first.id).position == 0
+      assert Tasks.get_task!(destination_second.id).position == 2
+    end
+
+    test "moves a task into an empty destination column" do
+      source_column = create_column("To Do")
+      destination_column = create_column("Done")
+
+      task = create_task(source_column)
+
+      assert {:ok, moved_task} =
+               Tasks.move_task_to_column(task, destination_column.id, 0)
+
+      assert moved_task.column_id == destination_column.id
+      assert moved_task.position == 0
+
+      assert Tasks.list_tasks(source_column.id) == []
+      assert Tasks.list_tasks(destination_column.id) == [moved_task]
+    end
+
+    test "allows inserting a task at the end of the destination column" do
+      source_column = create_column("To Do")
+      destination_column = create_column("In Progress")
+
+      task = create_task(source_column)
+
+      {:ok, existing} =
+        Tasks.create_task(destination_column.id, %{title: "Existing", position: 0})
+
+      assert {:ok, moved_task} =
+               Tasks.move_task_to_column(task, destination_column.id, 1)
+
+      assert moved_task.position == 1
+
+      assert Enum.map(Tasks.list_tasks(destination_column.id), & &1.title) ==
+               ["Existing", "Build feature"]
+
+      assert Tasks.get_task!(existing.id).position == 0
+    end
+
+    test "returns an error for a negative destination position without changing either column" do
+      source_column = create_column("To Do")
+      destination_column = create_column("In Progress")
+
+      task = create_task(source_column)
+      destination_task = create_task(destination_column)
+
+      assert {:error, :invalid_position} =
+               Tasks.move_task_to_column(task, destination_column.id, -1)
+
+      assert Tasks.list_tasks(source_column.id) == [task]
+      assert Tasks.list_tasks(destination_column.id) == [destination_task]
+    end
+
+    test "returns an error when the destination position is out of range" do
+      source_column = create_column("To Do")
+      destination_column = create_column("In Progress")
+
+      task = create_task(source_column)
+      destination_task = create_task(destination_column)
+
+      assert {:error, :invalid_position} =
+               Tasks.move_task_to_column(task, destination_column.id, 2)
+
+      assert Tasks.list_tasks(source_column.id) == [task]
+      assert Tasks.list_tasks(destination_column.id) == [destination_task]
+    end
+
+    test "returns an error when the destination column does not exist" do
+      source_column = create_column()
+      task = create_task(source_column)
+
+      assert {:error, :column_not_found} =
+               Tasks.move_task_to_column(task, -1, 0)
+
+      assert Tasks.list_tasks(source_column.id) == [task]
+    end
+
+    test "returns an error for a non-integer destination position" do
+      source_column = create_column()
+      destination_column = create_column("Done")
+      task = create_task(source_column)
+
+      assert {:error, :invalid_position} =
+               Tasks.move_task_to_column(task, destination_column.id, "0")
+
+      assert Tasks.list_tasks(source_column.id) == [task]
+      assert Tasks.list_tasks(destination_column.id) == []
+    end
+
+    test "uses the existing same-column move behavior" do
+      column = create_column()
+
+      {:ok, first} = Tasks.create_task(column.id, %{title: "First", position: 0})
+      {:ok, _second} = Tasks.create_task(column.id, %{title: "Second", position: 1})
+
+      assert {:ok, moved_task} =
+               Tasks.move_task_to_column(first, column.id, 1)
+
+      assert moved_task.column_id == column.id
+      assert moved_task.position == 1
+
+      assert Enum.map(Tasks.list_tasks(column.id), & &1.title) ==
+               ["Second", "First"]
+    end
+  end
+
   describe "delete_task/1" do
     test "deletes the task" do
       task = create_task(create_column())
