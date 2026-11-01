@@ -9,6 +9,12 @@ defmodule HologramBeamOpsKanban.Boards do
   alias HologramBeamOpsKanban.Boards.Column
   alias HologramBeamOpsKanban.Repo
 
+  @default_columns [
+    %{name: "To Do", position: 0},
+    %{name: "In Progress", position: 1},
+    %{name: "Done", position: 2}
+  ]
+
   @doc """
   Returns all boards, ordered by ID.
   """
@@ -34,6 +40,36 @@ defmodule HologramBeamOpsKanban.Boards do
     %Board{}
     |> Board.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Creates a board with the default Kanban columns.
+
+  The board and its columns are created in a single transaction.
+
+  Returns `{:ok, board}` on success or `{:error, reason}` on failure.
+  """
+  def create_board_with_default_columns(attrs \\ %{}) do
+    Repo.transaction(fn ->
+      board =
+        case create_board(attrs) do
+          {:ok, board} -> board
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+
+      Enum.each(@default_columns, fn column_attrs ->
+        case create_column(board.id, column_attrs) do
+          {:ok, _column} -> :ok
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+
+      board
+    end)
+    |> case do
+      {:ok, board} -> {:ok, board}
+      {:error, reason} -> {:error, reason}
+    end
   end
 
   @doc """

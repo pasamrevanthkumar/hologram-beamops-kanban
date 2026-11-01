@@ -45,6 +45,31 @@ defmodule HologramBeamOpsKanban.BoardsContextTest do
     end
   end
 
+  describe "create_board_with_default_columns/1" do
+    test "creates a board with the three default columns" do
+      assert {:ok, board} =
+               Boards.create_board_with_default_columns(%{
+                 name: "Engineering"
+               })
+
+      assert board.name == "Engineering"
+
+      assert [
+               %Column{name: "To Do", position: 0},
+               %Column{name: "In Progress", position: 1},
+               %Column{name: "Done", position: 2}
+             ] = Boards.list_columns(board.id)
+    end
+
+    test "returns a changeset error for a blank board name" do
+      assert {:error, changeset} =
+               Boards.create_board_with_default_columns(%{name: "   "})
+
+      assert "can't be blank" in errors_on(changeset).name
+      assert Boards.list_boards() == []
+    end
+  end
+
   describe "list_columns/1" do
     test "returns a board's columns ordered by position" do
       {:ok, board} = Boards.create_board(%{name: "Engineering"})

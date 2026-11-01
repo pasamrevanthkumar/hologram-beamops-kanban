@@ -3,7 +3,7 @@ import Config
 # Configure your database
 config :hologram_beamops_kanban, HologramBeamOpsKanban.Repo,
   username: System.get_env("DB_USERNAME", "revanth_dev"),
-  password: System.fetch_env!("DB_PASSWORD"),
+  password: System.get_env("DB_PASSWORD", ""),
   hostname: System.get_env("DB_HOST", "localhost"),
   database: "hologram_beamops_kanban_dev",
   stacktrace: true,
