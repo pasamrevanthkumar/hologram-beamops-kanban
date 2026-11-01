@@ -244,3 +244,55 @@ These warnings did not prevent either job from succeeding. They remain maintenan
 - PostgreSQL credentials used by CI are disposable test-only values.
 - The production Docker image is built but not pushed to a registry.
 - No AWS resources were provisioned by this workflow.
+
+## Production Docker runtime hardening — 2026-11-01
+
+### Non-root execution
+
+The production runtime image was hardened to use a dedicated system
+user and group named `app`.
+
+The release files are copied into the runtime image with ownership
+assigned to `app:app`, and the Dockerfile switches to `USER app`
+before starting the application.
+
+Local verification:
+- Runtime image: `hologram-beamops-kanban:ci`
+- Container identity: UID 999, GID 999 (`app`)
+- Working directory: `/app`
+- Elixir, Mix, Erlang CLI tools, and development tooling are not
+  exposed as runtime executables.
+- Release startup succeeded.
+- Application returned HTTP 200 through the temporary runtime test
+  container connected to the existing Compose network.
+
+### Runtime configuration and example environment
+
+The committed `.env.docker.example` documents the environment
+required for local Compose deployment.
+
+The actual `.env.docker` file remains ignored by Git.
+
+Secrets must be generated or supplied locally. They must not be
+committed or embedded in the Docker image.
+
+### Remote CI verification
+
+- Commit: `083ad94` — Harden production Docker runtime and document deployment.
+- GitHub Actions run ID: `41320737209`.
+- Compile, format and test job: passed.
+- Production Docker image build job: passed.
+- Overall workflow result: success.
+
+The run reported non-blocking Node.js 20 deprecation and Ubuntu
+runner migration warnings. These remain maintenance items.
+
+### Outcome
+
+The production image is built from a multi-stage Dockerfile,
+runs as a non-root user, and starts independently of development
+tooling. The image build and application validation are both
+covered by GitHub Actions.
+
+The image is built in CI but is not published to a registry.
+No AWS infrastructure was provisioned.

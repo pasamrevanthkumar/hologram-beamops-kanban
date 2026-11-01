@@ -54,6 +54,8 @@ GitHub issues: Pending
 
 ## Milestone M2 — CI and packaging
 
+Status: **Complete — 2026-11-01**
+
 Objective:
 Make application validation and packaging reproducible.
 
@@ -62,14 +64,29 @@ Includes:
 - OTP release
 - Docker image and runtime configuration
 - Image build and startup verification
+- Non-root production container execution
+- Documented local and containerized workflows
 
 Exit criteria:
-- CI validates proposed changes
-- Release and image can be reproduced using documented steps
-- Runtime configuration does not depend on development-only tooling
+- [x] CI validates proposed changes
+- [x] Release and image can be reproduced using documented steps
+- [x] Runtime configuration does not depend on development-only tooling
+- [x] Production container runs under a dedicated non-root user
+- [x] Production image starts successfully and serves HTTP requests
 
-GitHub milestone: Pending
-GitHub issues: Pending
+Verification evidence:
+- Local formatting and compilation checks passed.
+- Local test suite: 89 tests passed.
+- Production Docker image built successfully.
+- Runtime container verified as UID 999 (`app`).
+- Runtime image started successfully and returned HTTP 200.
+- GitHub Actions run `41320737209` passed both jobs:
+  - Compile, format and test
+  - Build production Docker image
+- Commit `083ad94` — Harden production Docker runtime and document deployment.
+
+GitHub milestone: M2 — CI and packaging
+GitHub issues: Refer to the corresponding GitHub milestone.
 
 ## Milestone M3 — Local operations
 
