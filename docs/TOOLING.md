@@ -133,3 +133,54 @@ These versions come from the application mix.lock file.
 The current evidence establishes the initial framework integration only. The full Kanban domain, database-backed workflows, production release, containers, CI, and deployment remain incomplete.
 
 AWS provisioning remains out of scope until explicitly authorized.
+
+## Terraform GitHub project-management verification — 2026-10-31
+
+Terraform is used to manage this project's GitHub repository planning
+resources as code. The configuration is maintained in
+`terraform/github-project-management/`.
+
+### Tool versions
+
+| Tool | Version |
+|---|---|
+| Terraform | 1.17.1 |
+| GitHub Terraform provider | `integrations/github` 6.13.0 |
+
+The provider version is constrained in `versions.tf` and recorded in
+`.terraform.lock.hcl`.
+
+### Managed resources
+
+The Terraform state tracks 22 GitHub resources:
+
+| Resource | Count |
+|---|---:|
+| GitHub repository | 1 |
+| Repository milestones | 8 |
+| Custom issue labels | 8 |
+| Planning issues | 5 |
+| **Total** | **22** |
+
+### Verification results
+
+- [x] Terraform configuration initialized with the GitHub provider.
+- [x] Terraform state inspected; all 22 expected resources are tracked.
+- [x] Refresh-only plan completed successfully.
+- [x] Normal Terraform plan completed successfully.
+- [x] Both plans reported no differences between the remote GitHub
+      resources, saved state, and configuration.
+
+No Terraform apply was necessary because the existing resources already
+matched the declared configuration.
+
+### State and security
+
+Terraform state, state backups, saved plans, and provider working
+directories remain local and are excluded from Git through `.gitignore`.
+Terraform state can contain sensitive resource metadata and must not be
+committed or published.
+
+This exercise manages GitHub project-management resources only. It does
+not provision AWS infrastructure. AWS provisioning remains out of scope
+until explicitly authorized.
