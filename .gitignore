@@ -18,6 +18,7 @@ override.tf.json
 # Local secrets and environment configuration
 .env
 .env.*
+!.env.docker.example
 !.env.example
 
 # Editor and operating system files

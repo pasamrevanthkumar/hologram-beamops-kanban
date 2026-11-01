@@ -59,6 +59,14 @@ RUN apt-get update -y && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a dedicated non-root application user
+RUN groupadd --system app && \
+    useradd --system \
+      --gid app \
+      --home-dir /app \
+      --no-create-home \
+      app
+
 WORKDIR /app
 
 ENV LANG=C.UTF-8
@@ -66,7 +74,10 @@ ENV HOME=/app
 ENV MIX_ENV=prod
 ENV PHX_SERVER=true
 
-COPY --from=release /app/_build/prod/rel/hologram_beamops_kanban ./
+COPY --from=release --chown=app:app \
+    /app/_build/prod/rel/hologram_beamops_kanban ./
+
+USER app
 
 EXPOSE 4000
 
