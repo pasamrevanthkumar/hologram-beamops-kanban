@@ -184,3 +184,63 @@ committed or published.
 This exercise manages GitHub project-management resources only. It does
 not provision AWS infrastructure. AWS provisioning remains out of scope
 until explicitly authorized.
+
+## GitHub Actions CI verification — 2026-11-01
+
+### Workflow
+
+Implemented `.github/workflows/ci.yml` to run automatically on:
+- Pushes to `main`
+- Pull requests targeting `main`
+
+The workflow contains two jobs:
+
+1. **Compile, format and test**
+   - Runs on `ubuntu-latest`.
+   - Uses Erlang/OTP 29.0 and Elixir 1.20.4.
+   - Starts PostgreSQL 18 as a GitHub Actions service container.
+   - Caches Mix dependencies and build artifacts.
+   - Installs Hex and Rebar.
+   - Fetches dependencies.
+   - Checks formatting with `mix format --check-formatted`.
+   - Compiles with `mix compile --warnings-as-errors`.
+   - Runs the test suite with `mix test`.
+
+2. **Build production Docker image**
+   - Runs only after the test job succeeds.
+   - Uses Docker Buildx and `docker/build-push-action`.
+   - Builds the production image without publishing it.
+   - Uses GitHub Actions cache (`type=gha`) for Docker build layers.
+
+### Local verification
+
+All checks passed before pushing the workflow:
+- `actionlint .github/workflows/ci.yml`
+- `direnv exec . mix format --check-formatted`
+- `direnv exec . mix compile --warnings-as-errors`
+- `direnv exec . mix test` — 89 tests passed.
+- `docker buildx build --load --tag hologram-beamops-kanban:ci .` — successful production image build.
+
+### Remote GitHub Actions verification
+
+- Workflow commit: `804c7e9` — Add GitHub Actions CI workflow.
+- GitHub Actions run ID: `41311250570`.
+- Test job: passed in 1m 56s.
+- Production Docker build job: passed in 7m 10s.
+- Overall workflow result: success.
+
+### Warnings observed
+
+The successful run reported non-blocking warnings:
+- GitHub Actions actions using Node.js 20 are being forced to run on Node.js 24.
+- The `xref: [exclude: ...]` option in `mix.exs` is deprecated; the compiler recommends `elixirc_options: [no_warn_undefined: ...]`.
+- GitHub's `ubuntu-latest` runner label is scheduled to migrate to Ubuntu 26.
+
+These warnings did not prevent either job from succeeding. They remain maintenance items for a future update.
+
+### Security and publishing
+
+- Workflow permissions are restricted to `contents: read`.
+- PostgreSQL credentials used by CI are disposable test-only values.
+- The production Docker image is built but not pushed to a registry.
+- No AWS resources were provisioned by this workflow.
