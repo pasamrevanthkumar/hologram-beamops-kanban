@@ -296,3 +296,80 @@ covered by GitHub Actions.
 
 The image is built in CI but is not published to a registry.
 No AWS infrastructure was provisioned.
+
+## Local operations verification — 2026-11-03
+
+### Docker Compose
+
+The local application environment uses three services:
+
+| Service | Responsibility |
+|---|---|
+| `db` | PostgreSQL 18 |
+| `migrate` | One-shot release migration task |
+| `app` | Hologram/Phoenix OTP release |
+
+Operational behavior verified:
+
+- The application waits for PostgreSQL to become healthy.
+- The migration service runs to completion before the application starts.
+- PostgreSQL uses the named volume
+  `hologram_beamops_kanban_postgres_data`.
+- Restarting PostgreSQL temporarily interrupts existing database
+  connections. The application subsequently reconnects successfully.
+- Restarting the application does not remove PostgreSQL data.
+- The application returned HTTP 200 after both restart experiments.
+
+A dedicated `m3_persistence_check` table was used to verify that a
+record survived a PostgreSQL container restart. This was a test
+artifact, not part of the application's domain schema.
+
+### Docker Swarm evaluation
+
+Docker Engine 29.9.2 and Docker Compose v5.6.1 were observed locally.
+
+A single-node Swarm was initialized on `hpomen` using the machine's
+local IPv4 address. A disposable `nginx:alpine` service was used to
+evaluate Swarm without migrating the Kanban application.
+
+Experiments:
+
+- Created a replicated service with two tasks.
+- Published container port 80 on host port 8080.
+- Verified HTTP 200.
+- Scaled the service from two to four replicas.
+- Force-removed one task container and observed Swarm replace it.
+- Scaled the service back to two replicas.
+- Removed the disposable service and verified that no Swarm
+  services remained.
+
+The experiments demonstrated desired-state reconciliation,
+replica scaling, and task replacement.
+
+### Orchestration decision
+
+Docker Compose remains the local orchestration tool for this project.
+It provides the required multi-container workflow for PostgreSQL,
+migrations, and the application release.
+
+Swarm was evaluated but not adopted for the application. The experiment
+used one physical node, so it did not establish machine-level
+high availability. A multi-node deployment would require additional
+planning for networking, persistent storage, failure domains, and
+operational security.
+
+Compose-managed services and Swarm services are managed independently.
+The disposable Swarm service was removed after the experiment.
+
+### Operational boundaries
+
+The M3 experiments did not include:
+
+- PostgreSQL backup and restore validation.
+- Recovery after permanent database-volume loss.
+- Extended database outage testing.
+- Multi-node Swarm operation.
+- Production deployment or AWS infrastructure.
+
+These remain possible future exercises rather than verified
+capabilities.

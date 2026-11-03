@@ -249,6 +249,30 @@ docker compose --env-file .env.docker down -v
 
 **Warning:** Removing the volume permanently deletes the local PostgreSQL data.
 
+## Local Operations and Recovery
+
+The local multi-service deployment uses Docker Compose to manage the
+application, PostgreSQL, and one-shot database migrations.
+
+Useful operational commands:
+
+```bash
+# Start the application stack
+docker compose --env-file .env.docker up -d
+
+# Inspect service status, including the completed migration container
+docker compose --env-file .env.docker ps -a
+
+# Follow application logs
+docker compose --env-file .env.docker logs -f app
+
+# Restart the application
+docker compose --env-file .env.docker restart app
+
+# Stop containers while preserving database data
+docker compose --env-file .env.docker down
+```
+
 ## Continuous Integration
 
 GitHub Actions runs automated validation on pushes to `main` and pull requests targeting `main`.

@@ -90,6 +90,8 @@ GitHub issues: Refer to the corresponding GitHub milestone.
 
 ## Milestone M3 — Local operations
 
+Status: **Complete — 2026-11-03**
+
 Objective:
 Build a reproducible local multi-service environment and understand
 the orchestration approach used by the book.
@@ -101,12 +103,45 @@ Includes:
 - Evaluation or local exercise of Docker Swarm where appropriate
 
 Exit criteria:
-- Environment starts from documented instructions
-- Data persistence and recovery behavior are tested
-- Service configuration is version-controlled
+- [x] Environment starts from documented instructions
+- [x] Data persistence and recovery behavior are tested
+- [x] Service configuration is version-controlled
 
-GitHub milestone: Pending
-GitHub issues: Pending
+Verification evidence:
+
+- Inspected the Compose services: `db`, `migrate`, and `app`.
+- Verified PostgreSQL health checks and migration completion
+  before application startup.
+- Confirmed PostgreSQL data is stored in the named
+  `hologram_beamops_kanban_postgres_data` volume.
+- Created a dedicated `m3_persistence_check` test table and verified
+  its record survived a PostgreSQL container restart.
+- Verified the running application reconnected to PostgreSQL after
+  the database restart.
+- Restarted the application container and verified HTTP 200 and
+  successful application-level database queries afterward.
+- Exercised a disposable Docker Swarm Nginx service:
+  - Created two replicas and verified HTTP 200.
+  - Scaled from two to four replicas.
+  - Removed one task container and observed Swarm create a replacement.
+  - Scaled back to two replicas.
+  - Removed the disposable service and verified cleanup.
+- Confirmed the Kanban Compose application and PostgreSQL volume
+  remained separate from the Swarm experiment.
+
+Limitations and follow-up:
+
+- Swarm was evaluated on a single node (`hpomen`). This does not
+  demonstrate multi-node high availability.
+- PostgreSQL recovery testing covered container restart, not backup
+  restoration or permanent volume-loss recovery.
+- Extended database outages and application behavior during a
+  prolonged outage were not tested.
+- Docker Compose remains the orchestration choice for this local
+  application. Swarm migration is not part of M3.
+
+GitHub milestone: M3 — Local operations
+GitHub issues: Refer to the corresponding GitHub milestone.
 
 ## Milestone M4 — AWS infrastructure and deployment
 
