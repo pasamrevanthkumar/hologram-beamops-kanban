@@ -60,6 +60,10 @@ FROM busybox:1.37.0@sha256:a7dbc319b1438115a207e11930dc4bb3e643dcb3ec0bdd694bb36
 # --------------------------------------------------
 FROM debian:trixie-slim@sha256:f6b08b09a05725f9431502d3b5714f5c4576e82c1a84fa1debe0c24a7e0c3ec4 AS runtime
 
+LABEL org.opencontainers.image.source="https://github.com/pasamrevanthkumar/hologram-beamops-kanban" \
+      org.opencontainers.image.title="Hologram BeamOps Kanban" \
+      org.opencontainers.image.description="A Hologram and Phoenix Kanban application for learning Elixir application operations and deployment."
+
 RUN apt-get update -y && apt-get install -y \
     libstdc++6 \
     openssl \
