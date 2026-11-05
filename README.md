@@ -1,8 +1,8 @@
 # Hologram BeamOps Kanban
 
-A Hologram-based Kanban application taken through the complete software delivery lifecycle, guided by *Engineering Elixir Applications*.
+A Hologram-based Kanban application taken through a practical software delivery lifecycle, guided by "Engineering Elixir Applications".
 
-The project combines application development with practical experience in testing, CI/CD, OTP releases, Docker, infrastructure as code, AWS deployment, distributed operation, and observability.
+The project applies a practical software delivery lifecycle to a Hologram-based application, covering testing, CI/CD, OTP releases, Docker, infrastructure as code, and a temporary AWS deployment. Distributed operation and observability are documented as deferred lifecycle topics.
 
 ## Project Principles
 
@@ -315,6 +315,43 @@ Additional project documentation is maintained in the `docs/` directory.
 
 ## Project Status
 
-The application implementation, automated tests, GitHub Actions CI, OTP release, and production Docker image have been implemented and tested locally.
+**Status: Initial application lifecycle completed — 2026-11-05**
 
-The project is progressing through M2 and M3 verification. AWS deployment has not yet started.
+The Hologram-based Kanban application has been implemented, tested,
+packaged, deployed to AWS, verified, and documented.
+
+Completed work includes:
+
+- Core Kanban functionality with PostgreSQL persistence.
+- Automated tests and GitHub Actions continuous integration.
+- OTP release and production Docker image.
+- Local multi-service deployment using Docker Compose.
+- Database readiness, migrations, health checks, and persistence verification.
+- A single-node Docker Swarm orchestration exercise.
+- Terraform-managed AWS infrastructure.
+- Temporary AWS deployment using EC2, Docker Compose, PostgreSQL, and GHCR.
+- Application health and browser-based functional verification.
+- Infrastructure teardown and AWS resource deletion verification.
+- Deployment and lifecycle documentation.
+
+The AWS deployment was intentionally temporary. The application was
+successfully verified, and the project-created AWS infrastructure was
+subsequently destroyed to avoid unnecessary ongoing costs.
+
+### Deferred work
+
+The following book lifecycle topics were not implemented in this iteration:
+
+- Automated continuous deployment to AWS.
+- Multi-node distributed deployment and Erlang cluster operation.
+- Production scaling, load balancing, and automated rollback.
+- Centralized logging and metrics.
+- PromEx metrics, Grafana dashboards, and alerting.
+
+These topics remain possible future extensions. They are not claimed as
+completed capabilities.
+
+### Deployment status
+
+The GitHub repository and published container images are retained as
+project artifacts. The AWS application environment is no longer running.

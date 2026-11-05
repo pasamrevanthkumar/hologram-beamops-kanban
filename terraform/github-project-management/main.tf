@@ -1,3 +1,4 @@
+
 resource "github_repository" "project" {
   name        = "hologram-beamops-kanban"
   description = "A Hologram-based Kanban application taken through the full Engineering Elixir Applications lifecycle."
@@ -21,35 +22,43 @@ locals {
   milestones = {
     M0 = {
       title       = "M0 - Planning and toolchain"
-      description = "Finalize scope, requirements, architecture, decisions, toolchain compatibility, documentation inventory, and GitHub project setup."
+      description = "Completed: scope, requirements, architecture, decisions, toolchain compatibility, official documentation inventory, and GitHub project setup."
+      state       = "closed"
     }
     M1 = {
       title       = "M1 - Working Kanban application"
-      description = "Build the Hologram-based Kanban application with task operations, persistence, migrations, tests, and updated documentation."
+      description = "Completed: Hologram-based Kanban application with task operations, PostgreSQL persistence, migrations, automated tests, and application documentation."
+      state       = "closed"
     }
     M2 = {
       title       = "M2 - CI and packaging"
-      description = "Add continuous integration, formatting and test checks, an OTP release, Docker packaging, runtime configuration, and startup verification."
+      description = "Completed: continuous integration, formatting and test checks, OTP release, Docker packaging, runtime configuration, and startup verification."
+      state       = "closed"
     }
     M3 = {
       title       = "M3 - Local operations"
-      description = "Configure local operations, Docker Compose, database readiness, health checks, persistence, and an appropriate local Docker Swarm exercise."
+      description = "Completed: Docker Compose, database readiness, migrations, health checks, persistence verification, and local Docker Swarm experiments."
+      state       = "closed"
     }
     M4 = {
       title       = "M4 - AWS infrastructure and deployment"
-      description = "Evaluate costs and architecture, manage AWS infrastructure with Terraform, assess Packer where justified, deploy, verify, and document cleanup."
+      description = "Completed: temporary AWS infrastructure provisioned with Terraform, application deployment and verification, persistence testing, documentation, and infrastructure destruction."
+      state       = "closed"
     }
     M5 = {
       title       = "M5 - Delivery and distributed operation"
-      description = "Implement deployment and rollback workflows, secret management, multi-node operation, Erlang distribution, service discovery, health checks, and scaling evaluation."
+      description = "Deferred: automated AWS continuous deployment, deployment rollback, multi-node Erlang distribution, service discovery, production cluster health, and scaling."
+      state       = "open"
     }
     M6 = {
       title       = "M6 - Observability"
-      description = "Add structured logs, metrics, suitable custom metrics, Grafana dashboards, alerting, and operational validation."
+      description = "Deferred: centralized logging, metrics, PromEx instrumentation, Grafana dashboards, alerting, and production observability validation. Basic container health checks and Docker logs were used."
+      state       = "open"
     }
     M7 = {
       title       = "M7 - Final validation and cleanup"
-      description = "Verify the complete lifecycle, review documentation and decisions, inventory resources, clean up billable infrastructure, and record lessons learned."
+      description = "In progress: final documentation and GitHub synchronization, repository security and portfolio review, monitoring for delayed AWS billing updates, and lessons learned. AWS infrastructure and local BeamOps runtime cleanup are complete."
+      state       = "open"
     }
   }
 }
@@ -61,6 +70,7 @@ resource "github_repository_milestone" "project" {
   repository  = github_repository.project.name
   title       = each.value.title
   description = each.value.description
+  state       = each.value.state
 }
 
 locals {
@@ -117,7 +127,6 @@ resource "github_issue_label" "project" {
   description = each.value.description
 }
 
-
 locals {
   project_issues = {
     hologram_compatibility = {
@@ -140,10 +149,16 @@ locals {
 
       ## Acceptance criteria
 
-      - [ ] Compatible versions and constraints are documented.
-      - [ ] Official documentation references are recorded.
-      - [ ] Unsupported or uncertain integrations are clearly identified.
-      - [ ] Findings are committed to the project documentation.
+      - [x] Compatible versions and constraints are documented.
+      - [x] Official documentation references are recorded.
+      - [x] Unsupported or uncertain integrations are clearly identified.
+      - [x] Findings are committed to the project documentation.
+
+      ## Verification evidence
+
+      - Compatibility and tooling findings are recorded in `docs/TOOLING.md`.
+      - Architecture boundaries and Hologram/Phoenix integration are documented in `docs/ARCHITECTURE.md`.
+      - Project dependencies and the implemented application provide integration evidence.
       EOT
     }
 
@@ -166,10 +181,16 @@ locals {
 
       ## Acceptance criteria
 
-      - [ ] References are recorded in the repository.
-      - [ ] Tool versions and unresolved version choices are distinguished.
-      - [ ] Documentation needed for later milestones is discoverable.
-      - [ ] No compatibility claim is made without supporting evidence.
+      - [x] References are recorded in the repository.
+      - [x] Tool versions and unresolved version choices are distinguished.
+      - [x] Documentation needed for later milestones is discoverable.
+      - [x] No compatibility claim is made without supporting evidence.
+
+      ## Verification evidence
+
+      - Official references and relevant tool versions are recorded in `docs/TOOLING.md`.
+      - Architecture, decisions, milestones, and deployment documentation are maintained under `docs/`.
+      - Deferred capabilities are explicitly distinguished from implemented functionality.
       EOT
     }
 
@@ -193,10 +214,16 @@ locals {
 
       ## Acceptance criteria
 
-      - [ ] Architecture decisions are supported by documentation or experiments.
-      - [ ] Confirmed components and proposed components are distinguished.
-      - [ ] Open technical questions are recorded.
-      - [ ] docs/ARCHITECTURE.md reflects the reviewed architecture.
+      - [x] Architecture decisions are supported by documentation or experiments.
+      - [x] Confirmed components and proposed components are distinguished.
+      - [x] Open technical questions are recorded.
+      - [x] docs/ARCHITECTURE.md reflects the reviewed architecture.
+
+      ## Verification evidence
+
+      - `docs/ARCHITECTURE.md` describes the implemented UI, host, domain, persistence, and database boundaries.
+      - `docs/DECISIONS.md` records the relevant architecture decisions.
+      - Implemented application behavior and automated tests provide supporting evidence.
       EOT
     }
 
@@ -220,10 +247,16 @@ locals {
 
       ## Acceptance criteria
 
-      - [ ] Decisions required for the initial local implementation are resolved.
-      - [ ] Unresolved future deployment decisions remain explicitly proposed.
-      - [ ] No cloud infrastructure is provisioned as part of this issue.
-      - [ ] docs/DECISIONS.md reflects the current decision statuses.
+      - [x] Decisions required for the initial local implementation are resolved.
+      - [x] Unresolved future deployment decisions remain explicitly proposed or deferred.
+      - [x] No cloud infrastructure is provisioned as part of this issue.
+      - [x] docs/DECISIONS.md reflects the current decision statuses.
+
+      ## Verification evidence
+
+      - `docs/DECISIONS.md` records the accepted application and temporary deployment decisions.
+      - Public exposure, multi-node operation, scaling, and full observability remain deferred.
+      - Temporary AWS infrastructure was destroyed after deployment verification.
       EOT
     }
 
@@ -246,10 +279,16 @@ locals {
 
       ## Acceptance criteria
 
-      - [ ] The workflow is documented in the repository.
-      - [ ] Required commands are verified where the application/tooling is available.
-      - [ ] Unverified commands are clearly marked rather than presented as tested.
-      - [ ] Local documentation remains the version-controlled project record.
+      - [x] The workflow is documented in the repository.
+      - [x] Required commands are verified where the application/tooling is available.
+      - [x] Unverified commands are clearly marked rather than presented as tested.
+      - [x] Local documentation remains the version-controlled project record.
+
+      ## Verification evidence
+
+      - Local development and verification procedures are documented in the repository.
+      - Formatting, compilation, automated tests, and container workflows were exercised.
+      - GitHub milestones and issues are used to track lifecycle progress.
       EOT
     }
   }
