@@ -1,7 +1,7 @@
 
 resource "github_repository" "project" {
   name        = "hologram-beamops-kanban"
-  description = "A Hologram-based Kanban application taken through the full Engineering Elixir Applications lifecycle."
+  description = "A Hologram-based Kanban application taken through a practical software delivery lifecycle, guided by \"Engineering Elixir Applications\"."
 
   visibility = "private"
 
@@ -57,8 +57,8 @@ locals {
     }
     M7 = {
       title       = "M7 - Final validation and cleanup"
-      description = "In progress: final documentation and GitHub synchronization, repository security and portfolio review, monitoring for delayed AWS billing updates, and lessons learned. AWS infrastructure and local BeamOps runtime cleanup are complete."
-      state       = "open"
+      description = "Completed: final documentation and GitHub synchronization, repository security and portfolio review, AWS infrastructure teardown verification, and billing review on 2026-11-05. Continue monitoring for delayed AWS billing updates after closure. M5 and M6 remain deferred."
+      state       = "closed"
     }
   }
 }
